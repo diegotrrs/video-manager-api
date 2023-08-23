@@ -6,6 +6,11 @@ generator client {
   binaryTargets = ["native", "linux-musl-arm64-openssl-1.1.x"]
 }
 
+generator erd {
+  provider = "prisma-erd-generator"
+  output = "../ERD.png"
+}
+
 generator zod {
   provider = "zod-prisma-types"
   output = "../src/generated/zod-schemas"
