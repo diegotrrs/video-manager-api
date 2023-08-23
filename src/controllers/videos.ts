@@ -1,7 +1,7 @@
 import {
   getAllVideos as getAllVideosService,
   getVideoById,
-  getVideoAnnotations,
+  getVideoAnnotations as getVideoAnnotationsService,
   createVideo as createVideoService,
   deleteVideo as deleteVideoService,
   createVideoAnnotation as createVideoAnnotationService,
@@ -23,10 +23,14 @@ export const getAllVideos = async (_req: Request, res: Response) => {
   }
 };
 
-export const getAnnotationsForVideo = async (req: Request, res: Response) => {
+export const getVideoAnnotations = async (req: Request, res: Response) => {
   const videoId = parseInt(req.params.videoId);
 
   try {
+    if (isNaN(videoId)) {
+      return res.status(400).json({ error: "Video Id must be a number" });
+    }
+
     const video = await getVideoById(videoId);
 
     if (!video) {
@@ -34,7 +38,7 @@ export const getAnnotationsForVideo = async (req: Request, res: Response) => {
     }
 
     // Retrieve annotations associated with the video
-    const annotations = await getVideoAnnotations(videoId);
+    const annotations = await getVideoAnnotationsService(videoId);
 
     res.status(200).json(annotations);
   } catch (error) {
@@ -90,11 +94,12 @@ export const deleteVideo = async (req: Request, res: Response) => {
 
 export const createVideoAnnotation = async (req: Request, res: Response) => {
   const videoId = parseInt(req.params.videoId);
-  const { body } = req;
 
   try {
     // During the creation we omit the id from the Schema since it isn't expected in this case.
-    const payload = AnnotationSchema.omit({ id: true }).parse(body);
+    const payload = AnnotationSchema.omit({ id: true })
+      .omit({ videoId: true })
+      .parse(req.body);
     const { startTimeInSec, endTimeInSec } = payload;
 
     const video = await getVideoById(videoId);
@@ -109,7 +114,10 @@ export const createVideoAnnotation = async (req: Request, res: Response) => {
         .json({ error: "Annotation is out of bounds of video duration" });
     }
 
-    const annotation = await createVideoAnnotationService(payload);
+    const annotation = await createVideoAnnotationService({
+      ...payload,
+      videoId,
+    });
 
     res.status(201).json(annotation);
   } catch (error) {
@@ -136,6 +144,12 @@ export const updateAnnotation = async (req: Request, res: Response) => {
 
   if (isNaN(videoId)) {
     return res.status(400).json({ error: "Video Id must be a number" });
+  }
+
+  const video = await getVideoById(videoId);
+
+  if (!video) {
+    return res.status(404).json({ error: "Video not found" });
   }
 
   if (isNaN(annotationId)) {
@@ -186,6 +200,12 @@ export const deleteAnnotation = async (req: Request, res: Response) => {
   const annotationId = parseInt(req.params.annotationId);
 
   try {
+    const video = await getVideoById(videoId);
+
+    if (!video) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
     const existingAnnotation = await getAnnotationById(annotationId);
 
     if (!existingAnnotation) {

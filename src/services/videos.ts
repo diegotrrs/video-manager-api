@@ -23,13 +23,12 @@ export const getVideoAnnotations = (videoId: VideoId) =>
     where: { videoId: videoId },
   });
 
-export const createVideo = async (video: VideoForInsertion) => {
-  await prisma.video.create({
+export const createVideo = async (video: VideoForInsertion) =>
+  prisma.video.create({
     data: {
       ...video,
     },
   });
-};
 
 export const deleteVideo = async (videoId: VideoId) => {
   await prisma.video.delete({

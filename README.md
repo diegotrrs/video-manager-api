@@ -47,3 +47,12 @@ npx prisma generate
 
 
 # Commas
+
+Note:
+
+controllers and services for video and annotations are in the same folder because they are interconnected. for example
+there are functions in the services for annotations that use the function service getVideoById
+
+
+ASsumption:
+Annotaion type is a string
