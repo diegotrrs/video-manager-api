@@ -1,0 +1,36 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator zod {
+  provider = "zod-prisma-types"
+  output = "../src/generated/zod-schemas"
+  createInputTypes = "false"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Video {
+  id          Int @id @default(autoincrement())
+  title       String       
+  link        String       
+  durationInSec    Int
+  description String?
+  annotations Annotation[]
+}
+
+model Annotation {
+  id         Int @id @default(autoincrement())
+  videoId    Int
+  video      Video @relation(fields: [videoId], references: [id])
+  startTimeInSec  Int
+  endTimeInSec    Int
+  type       String  
+  notes      String? 
+}
