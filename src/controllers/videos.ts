@@ -141,98 +141,97 @@ export const getVideoAnnotations = async (req: Request, res: Response) => {
  * 'As a user I would like to be able to update my annotation details'
  */
 export const updateAnnotation = async (req: Request, res: Response) => {
-    const videoId = parseInt(req.params.videoId);
-    const annotationId = parseInt(req.params.annotationId);
-  
-    if (isNaN(videoId)) {
-      return res.status(400).json({ error: "Video Id must be a number" });
-    }
-  
-    const video = await getVideoById(videoId);
-  
-    if (!video) {
-      return res.status(404).json({ error: "Video not found" });
-    }
-  
-    if (isNaN(annotationId)) {
-      return res.status(400).json({ error: "Annotiation Id must be a number" });
-    }
-  
-    try {
-      const payload = AnnotationSchema.omit({ id: true })
-        .omit({ videoId: true })
-        .parse(req.body);
-  
-      const existingAnnotation = await getAnnotationById(annotationId);
-  
-      if (!existingAnnotation) {
-        return res.status(404).json({ error: "Annotation not found" });
-      }
-  
-      if (existingAnnotation.videoId !== videoId) {
-        return res
-          .status(400)
-          .json({ error: "Annotation does not belong to the specified video" });
-      }
-  
-      const updatedAnnotation = await updateAnnotationService(annotationId, {
-        ...payload,
-        videoId,
-      });
-  
-      res.status(200).json(updatedAnnotation);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const errors = error.errors.map((err) => ({
-          field: err.path.join("."),
-          message: err.message,
-        }));
-        res.status(422).json({
-          error: "Validation failed",
-          details: errors,
-        });
-      } else {
-        res.status(500).json({ error: "Failed to update annotation" });
-      }
-    }
-  };
+  const videoId = parseInt(req.params.videoId);
+  const annotationId = parseInt(req.params.annotationId);
 
+  if (isNaN(videoId)) {
+    return res.status(400).json({ error: "Video Id must be a number" });
+  }
+
+  const video = await getVideoById(videoId);
+
+  if (!video) {
+    return res.status(404).json({ error: "Video not found" });
+  }
+
+  if (isNaN(annotationId)) {
+    return res.status(400).json({ error: "Annotiation Id must be a number" });
+  }
+
+  try {
+    const payload = AnnotationSchema.omit({ id: true })
+      .omit({ videoId: true })
+      .parse(req.body);
+
+    const existingAnnotation = await getAnnotationById(annotationId);
+
+    if (!existingAnnotation) {
+      return res.status(404).json({ error: "Annotation not found" });
+    }
+
+    if (existingAnnotation.videoId !== videoId) {
+      return res
+        .status(400)
+        .json({ error: "Annotation does not belong to the specified video" });
+    }
+
+    const updatedAnnotation = await updateAnnotationService(annotationId, {
+      ...payload,
+      videoId,
+    });
+
+    res.status(200).json(updatedAnnotation);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errors = error.errors.map((err) => ({
+        field: err.path.join("."),
+        message: err.message,
+      }));
+      res.status(422).json({
+        error: "Validation failed",
+        details: errors,
+      });
+    } else {
+      res.status(500).json({ error: "Failed to update annotation" });
+    }
+  }
+};
 
 /**
  * Deletes an annotation associated to a video. Requirements associated:
  * As a user I would like to be able to delete my annotations
  */
 export const deleteAnnotation = async (req: Request, res: Response) => {
-    const videoId = parseInt(req.params.videoId);
-    const annotationId = parseInt(req.params.annotationId);
-  
-    try {
-      const video = await getVideoById(videoId);
-  
-      if (!video) {
-        return res.status(404).json({ error: "Video not found" });
-      }
-  
-      const existingAnnotation = await getAnnotationById(annotationId);
-  
-      if (!existingAnnotation) {
-        return res.status(404).json({ error: "Annotation not found" });
-      }
-  
-      if (existingAnnotation.videoId !== videoId) {
-        return res
-          .status(400)
-          .json({ error: "Annotation does not belong to the specified video" });
-      }
-  
-      await deleteAnnotationService(annotationId);
-  
-      res.status(200).json({ message: "Annotation deleted successfully" });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to delete annotation" });
+  const videoId = parseInt(req.params.videoId);
+  const annotationId = parseInt(req.params.annotationId);
+
+  try {
+    const video = await getVideoById(videoId);
+
+    if (!video) {
+      return res.status(404).json({ error: "Video not found" });
     }
-  };
-  
+
+    const existingAnnotation = await getAnnotationById(annotationId);
+
+    if (!existingAnnotation) {
+      return res.status(404).json({ error: "Annotation not found" });
+    }
+
+    if (existingAnnotation.videoId !== videoId) {
+      return res
+        .status(400)
+        .json({ error: "Annotation does not belong to the specified video" });
+    }
+
+    await deleteAnnotationService(annotationId);
+
+    res.status(200).json({ message: "Annotation deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete annotation" });
+  }
+};
+
 /**
  * Deletes a video from the DB. Requirements associated:
  * 'As a user I would like to be able to delete video from the system'
