@@ -1,18 +1,19 @@
 import {
   getAllVideos as getAllVideosService,
-  getVideoById,
   getVideoAnnotations as getVideoAnnotationsService,
   createVideo as createVideoService,
   deleteVideo as deleteVideoService,
   createVideoAnnotation as createVideoAnnotationService,
-  getAnnotationById,
   updateAnnotation as updateAnnotationService,
   deleteAnnotation as deleteAnnotationService,
+  getAnnotationById,
+  getVideoById,
 } from "../services/videos";
 
 import { AnnotationSchema, VideoSchema } from "../generated/zod-schemas";
-import { Request, Response } from "express";
+import { Request, Response, response } from "express";
 import { z } from "zod";
+import handleErrorForResponse from "../utils/handleErrorForResponse";
 
 /**
  * Returns all of the videos in the DB.
@@ -39,20 +40,7 @@ export const createVideo = async (req: Request, res: Response) => {
 
     res.status(201).json(video);
   } catch (error) {
-    console.error(error);
-
-    if (error instanceof z.ZodError) {
-      const errors = error.errors.map((err) => ({
-        field: err.path.join("."),
-        message: err.message,
-      }));
-      res.status(422).json({
-        error: "Validation failed",
-        details: errors,
-      });
-    } else {
-      res.status(500).send({ error: "Internal Server Error" });
-    }
+    handleErrorForResponse(error, res);
   }
 };
 
@@ -65,24 +53,15 @@ export const createVideo = async (req: Request, res: Response) => {
 export const createVideoAnnotation = async (req: Request, res: Response) => {
   const videoId = parseInt(req.params.videoId);
 
+  if (isNaN(videoId)) {
+    return res.status(400).json({ error: "Video Id must be a number" });
+  }
+
   try {
     // During the creation we omit the id from the Schema since it isn't expected in this case.
     const payload = AnnotationSchema.omit({ id: true })
       .omit({ videoId: true })
       .parse(req.body);
-    const { startTimeInSec, endTimeInSec } = payload;
-
-    const video = await getVideoById(videoId);
-
-    if (!video) {
-      return res.status(404).json({ error: "Video not found" });
-    }
-
-    if (startTimeInSec < 0 || endTimeInSec > video.durationInSec) {
-      return res
-        .status(400)
-        .json({ error: "Annotation is out of bounds of video duration" });
-    }
 
     const annotation = await createVideoAnnotationService({
       ...payload,
@@ -91,20 +70,7 @@ export const createVideoAnnotation = async (req: Request, res: Response) => {
 
     res.status(201).json(annotation);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      const errors = error.errors.map((err) => ({
-        field: err.path.join("."),
-        message: err.message,
-      }));
-      res.status(422).json({
-        error: "Validation failed",
-        details: errors,
-      });
-    } else {
-      res.status(500).send({ error: "Internal Server Error" });
-    }
-
-    res.status(500).json({ error: "Failed to create annotation" });
+    handleErrorForResponse(error, res);
   }
 };
 
@@ -120,18 +86,15 @@ export const getVideoAnnotations = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Video Id must be a number" });
     }
 
-    const video = await getVideoById(videoId);
-
-    if (!video) {
-      return res.status(404).json({ error: "Video not found" });
-    }
+    // Retrieve video to check if it exists.
+    await getVideoById(videoId);
 
     // Retrieve annotations associated with the video
     const annotations = await getVideoAnnotationsService(videoId);
 
     res.status(200).json(annotations);
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch annotations" });
+    handleErrorForResponse(error, res);
   }
 };
 
@@ -148,32 +111,17 @@ export const updateAnnotation = async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Video Id must be a number" });
   }
 
-  const video = await getVideoById(videoId);
-
-  if (!video) {
-    return res.status(404).json({ error: "Video not found" });
-  }
-
   if (isNaN(annotationId)) {
     return res.status(400).json({ error: "Annotiation Id must be a number" });
   }
 
   try {
+    // Retrieve video to check if it exists.
+    await getVideoById(videoId);
+
     const payload = AnnotationSchema.omit({ id: true })
       .omit({ videoId: true })
       .parse(req.body);
-
-    const existingAnnotation = await getAnnotationById(annotationId);
-
-    if (!existingAnnotation) {
-      return res.status(404).json({ error: "Annotation not found" });
-    }
-
-    if (existingAnnotation.videoId !== videoId) {
-      return res
-        .status(400)
-        .json({ error: "Annotation does not belong to the specified video" });
-    }
 
     const updatedAnnotation = await updateAnnotationService(annotationId, {
       ...payload,
@@ -182,18 +130,7 @@ export const updateAnnotation = async (req: Request, res: Response) => {
 
     res.status(200).json(updatedAnnotation);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      const errors = error.errors.map((err) => ({
-        field: err.path.join("."),
-        message: err.message,
-      }));
-      res.status(422).json({
-        error: "Validation failed",
-        details: errors,
-      });
-    } else {
-      res.status(500).json({ error: "Failed to update annotation" });
-    }
+    handleErrorForResponse(error, res);
   }
 };
 
@@ -206,29 +143,10 @@ export const deleteAnnotation = async (req: Request, res: Response) => {
   const annotationId = parseInt(req.params.annotationId);
 
   try {
-    const video = await getVideoById(videoId);
-
-    if (!video) {
-      return res.status(404).json({ error: "Video not found" });
-    }
-
-    const existingAnnotation = await getAnnotationById(annotationId);
-
-    if (!existingAnnotation) {
-      return res.status(404).json({ error: "Annotation not found" });
-    }
-
-    if (existingAnnotation.videoId !== videoId) {
-      return res
-        .status(400)
-        .json({ error: "Annotation does not belong to the specified video" });
-    }
-
-    await deleteAnnotationService(annotationId);
-
+    await deleteAnnotationService(annotationId, videoId);
     res.status(200).json({ message: "Annotation deleted successfully" });
   } catch (error) {
-    res.status(500).json({ error: "Failed to delete annotation" });
+    handleErrorForResponse(error, res);
   }
 };
 
@@ -244,15 +162,9 @@ export const deleteVideo = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Video Id must be a number" });
     }
 
-    const video = await getVideoById(videoId);
-
-    if (!video) {
-      return res.status(404).json({ error: "Video not found" });
-    }
-
     await deleteVideoService(videoId);
     res.status(200).json({ message: "Video deleted successfully" });
   } catch (error) {
-    res.status(500).json({ error: "Failed to delete video" });
+    handleErrorForResponse(error, res);
   }
 };

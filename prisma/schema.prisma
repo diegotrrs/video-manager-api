@@ -34,7 +34,7 @@ model Video {
 model Annotation {
   id         Int @id @default(autoincrement())
   videoId    Int
-  video      Video @relation(fields: [videoId], references: [id])
+  video      Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
   startTimeInSec  Int
   endTimeInSec    Int
   type       String  

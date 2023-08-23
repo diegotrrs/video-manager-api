@@ -15,5 +15,5 @@ CREATE TABLE "Annotation" (
     "endTimeInSec" INTEGER NOT NULL,
     "type" TEXT NOT NULL,
     "notes" TEXT,
-    CONSTRAINT "Annotation_videoId_fkey" FOREIGN KEY ("videoId") REFERENCES "Video" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT "Annotation_videoId_fkey" FOREIGN KEY ("videoId") REFERENCES "Video" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
