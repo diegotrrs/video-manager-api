@@ -6,7 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "npx nodemon",
-    "start": "ts-node src/server.ts",
+    "migrate": "npx prisma migrate",
+    "generate": "npx prisma generate",
+    "start": "ts-node --transpile-only src/server.ts",
     "lint": "eslint . --ext .ts"
   },
   "keywords": [],
