@@ -8,6 +8,10 @@ COPY prisma ./prisma/
 
 COPY . .
 
+ARG DATABASE_URL
+ARG API_KEY
+ARG DISABLE_ERD
+
 RUN npm install
 
 RUN npx prisma migrate deploy
